@@ -62,7 +62,7 @@ public class ResponseDto<T> {
             if (log.isDebugEnabled())
                 log.debug("Oops, An error occurred while processing the request", ex);
             else
-                log.error("Oops, An error occurred while processing the request cased by {}", ex.getCause().getLocalizedMessage(), ex);
+                log.error("Oops, An error occurred while processing the request cased by {}", ex.getLocalizedMessage(), ex);
         }
 
         return new ResponseDto<>(msg, OPERATION_FAILED, Boolean.FALSE);
