@@ -1,0 +1,139 @@
+import csv
+import subprocess
+from datetime import datetime, timedelta
+
+# Function to create an app user using the Box CLI
+def create_app_user(user_name):
+    command = f'box users:create --name "{user_name}" --json'
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Error creating user {user_name}: {result.stderr}")
+        return None
+    else:
+        # Parse the JSON response to get the user ID
+        response_json = eval(result.stdout)
+        user_id = response_json['id']
+        return user_id
+
+# Function to generate users and save them to a CSV
+def generate_users(start_date, end_date, output_csv):
+    start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+    end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
+
+    current_date = start_date_obj
+    user_data = []
+
+    while current_date <= end_date_obj:
+        user_name = f"user_{current_date.strftime('%Y-%m-%d')}"
+        user_id = create_app_user(user_name)
+        if user_id:
+            user_data.append({'user_name': user_name, 'user_id': user_id})
+        current_date += timedelta(days=1)
+
+    # Write the generated user data to a CSV file
+    with open(output_csv, mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=['user_name', 'user_id'])
+        writer.writeheader()
+        for data in user_data:
+            writer.writerow(data)
+
+    print(f"Generated {len(user_data)} users and saved to {output_csv}")
+
+# Main execution
+if __name__ == "__main__":
+    start_date = "2024-09-01"  # Input start date in YYYY-MM-DD format
+    end_date = "2024-09-05"    # Input end date in YYYY-MM-DD format
+    output_csv = "generated_users.csv"  # Output CSV file name
+
+    generate_users(start_date, end_date, output_csv)
+
+
+
+
+-------------------------------------------------------------
+
+import csv
+import subprocess
+from datetime import datetime, timedelta
+
+# Function to create an app user using the Box CLI
+def create_app_user(user_name):
+    command = f'box users:create --name "{user_name}" --json'
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Error creating user {user_name}: {result.stderr}")
+        return None
+    else:
+        # Parse the JSON response to get the user ID
+        response_json = eval(result.stdout)
+        user_id = response_json['id']
+        return user_id
+
+# Function to create a folder in Box and return the folder ID
+def create_folder(folder_name, parent_folder_id="0"):
+    command = f'box folders:create --name "{folder_name}" --parent-id {parent_folder_id} --json'
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Error creating folder {folder_name}: {result.stderr}")
+        return None
+    else:
+        response_json = eval(result.stdout)
+        folder_id = response_json['id']
+        return folder_id
+
+# Function to add a collaborator to a folder
+def add_collaborator(folder_id, user_id, role="editor"):
+    command = f'box folders:collaborations:add {folder_id} --login "{user_id}" --role {role}'
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Error adding collaborator to folder {folder_id}: {result.stderr}")
+    else:
+        print(f"Added user {user_id} as a collaborator to folder {folder_id}")
+
+# Function to generate users, create folders, and assign collaborators
+def generate_users_and_folders(start_date, end_date, output_csv):
+    start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+    end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
+
+    current_date = start_date_obj
+    user_data = []
+
+    while current_date <= end_date_obj:
+        user_name = f"user_{current_date.strftime('%Y-%m-%d')}"
+        user_id = create_app_user(user_name)
+        if user_id:
+            user_data.append({'user_name': user_name, 'user_id': user_id})
+
+            # Create date folder
+            date_folder_name = current_date.strftime('%Y-%m-%d')
+            date_folder_id = create_folder(date_folder_name)
+
+            if date_folder_id:
+                # Add app user as a collaborator to the date folder
+                add_collaborator(date_folder_id, user_id)
+
+                # Create subfolders for every 15 minutes within the date folder
+                for hour in range(24):
+                    for minute in range(0, 60, 15):
+                        time_folder_name = f"{str(hour).zfill(2)}:{str(minute).zfill(2)}"
+                        create_folder(time_folder_name, parent_folder_id=date_folder_id)
+
+        current_date += timedelta(days=1)
+
+    # Write the generated user data to a CSV file
+    with open(output_csv, mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=['user_name', 'user_id'])
+        writer.writeheader()
+        for data in user_data:
+            writer.writerow(data)
+
+    print(f"Generated {len(user_data)} users, created folders, and saved data to {output_csv}")
+
+# Main execution
+if __name__ == "__main__":
+    start_date = "2024-09-01"  # Input start date in YYYY-MM-DD format
+    end_date = "2024-09-05"    # Input end date in YYYY-MM-DD format
+    output_csv = "generated_users.csv"  # Output CSV file name
+
+    generate_users_and_folders(start_date, end_date, output_csv)
+
